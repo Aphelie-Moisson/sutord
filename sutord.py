@@ -52,22 +52,36 @@ def types_to_emojis(types):
 def join(seq, sep, sep_last):
     return sep.join(seq[:-1]) + sep_last + seq[-1] if len(seq) > 1 else seq[0]
 
-def split(message, limit=2000):
+def split_message(message, limit=2000, min_lines=4):
     lines = message.split('\n')
     it = iter(lines)
     current = next(it)
 
-    for line in it:
-        if len(current) + len(line) < limit:
-            current += f'\n{line}'
+    # Create messages as long as possible according to `limit`
+    messages = [[]]
+    for line in lines:
+        if len('\n'.join(messages[-1]) + "\n" + line) < limit:
+            messages[-1].append(line)
         else:
-            yield current
-            current = line
+            messages.append([line])
 
-    yield current
+    # Starting from the last message, if it is too short (according to `min_lines`),
+    # take the last line from preceding message and add it to the current one
+    # (provided it doesn't make it go over the character limit)
+    for i in range(len(messages)-1, 0, -1):
+        if len(messages[i]) >= min_lines:
+            continue
+        while len("\n".join(messages[i]) + "\n" + messages[i-1][-1]) < limit:
+            messages[i] = [messages[i-1].pop(-1)] + messages[i]
+            if len(messages[i]) >= min_lines:
+                break
+
+    # Yield the split messages
+    for msg in messages:
+        yield "\n".join(msg)
 
 async def send_long_message(channel, message):
-    for msg in split(message):
+    for msg in split_message(message):
         await channel.send(msg)
 
 class Dictionary:
