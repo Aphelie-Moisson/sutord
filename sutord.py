@@ -54,8 +54,6 @@ def join(seq, sep, sep_last):
 
 def split_message(message, limit=2000, min_lines=4):
     lines = message.split('\n')
-    it = iter(lines)
-    current = next(it)
 
     # Create messages as long as possible according to `limit`
     messages = [[]]
